@@ -1,5 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:money_search/data/MoneyController.dart';
+import 'package:money_search/data/cache.dart';
+import 'package:money_search/data/internet.dart';
+import 'package:money_search/data/string.dart';
 import 'package:money_search/model/MoneyModel.dart';
 import 'package:money_search/model/listPersonModel.dart';
 
@@ -10,10 +15,28 @@ class HomeView extends StatefulWidget {
   State<HomeView> createState() => _HomeViewState();
 }
 
+
+
 /// instancia do modelo para receber as informações
 List<ListPersonModel> model = [];
 
 class _HomeViewState extends State<HomeView> {
+
+
+
+checkconnection() async {
+  internet = await CheckInternet().checkConnection();
+  setState(() {});
+}
+  
+  bool internet = true;
+
+@override
+initState() {
+  checkconnection();
+  super.initState();
+}
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -21,6 +44,9 @@ class _HomeViewState extends State<HomeView> {
           title: Text('Lista de pessoas'),
           centerTitle: true,
           backgroundColor: Colors.lightGreen,
+          actions: [
+            Visibility(child: Icon(Icons.network_cell_outlined)
+        )],
         ),
         body: FutureBuilder<List<ListPersonModel>>(
           future: MoneyController().getListPerson(),
@@ -97,8 +123,32 @@ class _HomeViewState extends State<HomeView> {
           },
         ));
   }
+    verifyData(AsyncSnapshot snapshot) async {
+      try {
+        model.clear();
+        model.addAll(snapshot.data ?? []);
+        await SecureStorage()
+          .writeSecureData(pessoas, json.encode(snapshot.data));
+
+      } catch (e) {
+        print("erro ao salvar lista");
+      }
+
+    }
+
+    readMemory() async {
+      var result = await SecureStorage().readSecureData(pessoas);
+      if (result == null) return;
+      List<ListPersonModel> lista = (json.decode(result) as List)
+      .map((e) => ListPersonModel.fromJson(e))
+      .toList();
+      model.addAll(lista);
+    }
+
 
   Future<Null> refresh() async {
     setState(() {});
   }
 }
+
+
